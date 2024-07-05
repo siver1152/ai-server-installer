@@ -31,6 +31,18 @@ install_docker() {
     echo "Docker installed successfully."
 }
 
+# Function to ensure Docker instances auto-start
+ensure_docker_autostart() {
+    echo "Ensuring all Docker containers are set to auto-start..."
+    docker update --restart unless-stopped $(docker ps -aq)
+    echo "Docker containers updated to auto-start on boot."
+
+    echo "Enabling Docker service to start on boot..."
+    systemctl enable docker
+    systemctl start docker
+    echo "Docker service enabled and started."
+}
+
 # Function to install LocalAI
 install_localai() {
     echo "Installing LocalAI..."
@@ -107,6 +119,9 @@ case $choice in
         exit 1
         ;;
 esac
+
+# Ensure Docker instances auto-start
+ensure_docker_autostart
 
 echo "Script execution completed."
 exit 0
