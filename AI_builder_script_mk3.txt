@@ -1,0 +1,112 @@
+#!/bin/bash
+
+# Mass install script for LocalAI, AnythingLLM server, and ChromaDB to run all in one VM/docker container
+# Install script is for the latest Ubuntu Server 20.04 with the latest updates and upgrades as of 7/5/2024
+
+# Check if the script is being run as root
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root"
+   exit 1
+fi
+
+# Get the username of the user who invoked sudo
+USERNAME=$(logname)
+
+# Get the home directory of that user
+USER_HOME=$(getent passwd "$USERNAME" | cut -d: -f6)
+
+# Confirm directory change
+echo "Running script as user: $USERNAME with home directory: $USER_HOME"
+
+# Function to install Docker
+install_docker() {
+    echo "Installing Docker..."
+    apt update -y
+    apt upgrade -y
+    apt install apt-transport-https ca-certificates curl software-properties-common net-tools vim -y
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+    add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu focal stable"
+    apt update -y
+    apt install docker-ce -y
+    echo "Docker installed successfully."
+}
+
+# Function to install LocalAI
+install_localai() {
+    echo "Installing LocalAI..."
+    curl https://localai.io/install.sh | sh
+    docker ps
+    echo "LocalAI installed successfully."
+}
+
+# Function to install AnythingLLM Server
+install_anythingllm() {
+    echo "Installing AnythingLLM Server..."
+    cd "$USER_HOME" || { echo "Failed to change to user's home directory"; exit 1; }
+    git clone https://github.com/Mintplex-Labs/anything-llm.git
+    cd anything-llm
+    touch server/storage/anythingllm.db
+    cd docker/
+    cp .env.example .env
+    docker-compose up -d
+    echo "AnythingLLM Server installed successfully."
+}
+
+# Function to install ChromaDB
+install_chromadb() {
+    echo "Installing ChromaDB..."
+    cd "$USER_HOME" || { echo "Failed to change to user's home directory"; exit 1; }
+    mkdir -p chroma
+    cd chroma
+    docker pull chromadb/chroma
+    docker run -d -p 8000:8000 -v "$USER_HOME/chroma:/chroma/chroma" chromadb/chroma
+    echo "ChromaDB installed successfully."
+}
+
+# Prompt user for installation choice
+echo "Select the program(s) you want to install:"
+echo "1) Docker"
+echo "2) LocalAI"
+echo "3) AnythingLLM Server"
+echo "4) ChromaDB"
+echo "5) All AI programs (LocalAI, AnythingLLM, ChromaDB) without Docker"
+echo "6) All programs"
+echo "7) None"
+
+read -p "Enter your choice [1-7]: " choice
+
+case $choice in
+    1)
+        install_docker
+        ;;
+    2)
+        install_localai
+        ;;
+    3)
+        install_anythingllm
+        ;;
+    4)
+        install_chromadb
+        ;;
+    5)
+        install_localai
+        install_anythingllm
+        install_chromadb
+        ;;
+    6)
+        install_docker
+        install_localai
+        install_anythingllm
+        install_chromadb
+        ;;
+    7)
+        echo "No programs will be installed."
+        ;;
+    *)
+        echo "Invalid choice. Exiting."
+        exit 1
+        ;;
+esac
+
+echo "Script execution completed."
+exit 0
