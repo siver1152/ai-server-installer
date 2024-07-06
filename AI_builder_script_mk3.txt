@@ -60,7 +60,7 @@ install_anythingllm() {
     touch server/storage/anythingllm.db
     cd docker/
     cp .env.example .env
-    docker up -d
+    docker compose up
     echo "AnythingLLM Server installed successfully."
 }
 
